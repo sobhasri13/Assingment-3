@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Fruit Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #87CEEB;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            height: 100vh;
+            justify-content: center;
+        }
+        #gameArea {
+            width: 800px;
+            height: 600px;
+            border: 2px solid #333;
+            position: relative;
+            background-color: #f0f0f0;
+            overflow: hidden;
+        }
+        #basket {
+            width: 120px;
+            height: 60px;
+            background-color: #8B4513; /* Brown color for basket */
+            position: absolute;
+            bottom: 20px;
+            left: 340px;
+            border-radius: 10px 10px 0 0; /* Curved top for basket-like shape */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            z-index: 10; /* Ensure basket is above fruits */
+            border: 2px solid #654321; /* Darker border for visibility */
+        }
+        .fruit {
+            width: 40px;
+            height: 40px;
+            position: absolute;
+            background-size: cover;
+            border-radius: 50%; /* Circular shape for fruits */
+            transition: top 0.02s linear;
+            z-index: 5; /* Fruits below basket */
+        }
+        #score, #lives {
+            font-size: 24px;
+            margin: 10px;
+            color: #333;
+        }
+        #gameOver {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: red;
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 15; /* Above all elements */
+        }
+        #startButton {
+            font-size: 24px;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        #startButton:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <button id="startButton">Start Game</button>
+    <div id="score">Score: 0</div>
+    <div id="lives">Lives: 3</div>
+    <div id="gameArea">
+        <div id="basket"></div>
+        <div id="gameOver">Game Over!<br>Press R to Restart</div>
+    </div>
+
+    <script>
+        const gameArea = document.getElementById('gameArea');
+        const basket = document.getElementById('basket');
+        const scoreDisplay = document.getElementById('score');
+        const livesDisplay = document.getElementById('lives');
+        const gameOverDisplay = document.getElementById('gameOver');
+        const startButton = document.getElementById('startButton');
+        let score = 0;
+        let lives = 3;
+        let basketX = 340;
+        let gameActive = false;
+        let fruitInterval;
+        const basketSpeed = 12;
+        const fruitImages = [
+            'https://img.icons8.com/color/48/000000/apple.png',
+            'https://img.icons8.com/color/48/000000/orange.png',
+            'https://img.icons8.com/color/48/000000/banana.png'
+        ];
+
+        // Debug: Log basket initialization
+        console.log('Basket initialized at:', basket.style.left, basket.style.bottom);
+
+        // Event listeners
+        document.addEventListener('keydown', moveBasket);
+        document.addEventListener('keydown', restartGame);
+        startButton.addEventListener('click', startGame);
+
+        function startGame() {
+            if (gameActive) return;
+            gameActive = true;
+            score = 0;
+            lives = 3;
+            basketX = 340;
+            basket.style.left = basketX + 'px';
+            basket.style.display = 'block'; // Ensure basket is visible
+            scoreDisplay.textContent = `Score: ${score}`;
+            livesDisplay.textContent = `Lives: ${lives}`;
+            gameOverDisplay.style.display = 'none';
+            startButton.style.display = 'none';
+            document.querySelectorAll('.fruit').forEach(fruit => fruit.remove());
+            fruitInterval = setInterval(createFruit, 1200);
+            console.log('Game started, basket at:', basket.style.left);
+        }
+
+        function moveBasket(e) {
+            if (!gameActive) return;
+            if (e.key === 'ArrowLeft' && basketX > 0) {
+                basketX -= basketSpeed;
+            } else if (e.key === 'ArrowRight' && basketX < 680) {
+                basketX += basketSpeed;
+            }
+            basket.style.left = basketX + 'px';
+            console.log('Basket moved to:', basketX); // Debug basket position
+        }
+
+        function createFruit() {
+            if (!gameActive) return;
+            const fruit = document.createElement('div');
+            fruit.classList.add('fruit');
+            const randomFruit = fruitImages[Math.floor(Math.random() * fruitImages.length)];
+            fruit.style.backgroundImage = `url(${randomFruit})`;
+            fruit.style.left = Math.random() * 760 + 'px';
+            fruit.style.top = '0px';
+            gameArea.appendChild(fruit);
+            console.log('Fruit created at:', fruit.style.left); // Debug fruit creation
+            moveFruit(fruit);
+        }
+
+        function moveFruit(fruit) {
+            let fruitY = 0;
+            const fallSpeed = 2.5;
+            const fallInterval = setInterval(() => {
+                if (!gameActive) {
+                    clearInterval(fallInterval);
+                    fruit.remove();
+                    return;
+                }
+                fruitY += fallSpeed;
+                fruit.style.top = fruitY + 'px';
+
+                // Check for collision with basket
+                if (fruitY > 520 && fruitY < 600 && Math.abs(parseInt(fruit.style.left) - basketX) < 100) {
+                    score += 10;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                    fruit.remove(); // Remove fruit when caught
+                    clearInterval(fallInterval);
+                    console.log('Fruit caught, score:', score); // Debug catch
+                } else if (fruitY > 600) {
+                    lives--;
+                    livesDisplay.textContent = `Lives: ${lives}`;
+                    fruit.remove();
+                    clearInterval(fallInterval);
+                    console.log('Fruit missed, lives:', lives); // Debug miss
+                    if (lives <= 0) {
+                        endGame();
+                    }
+                }
+            }, 20);
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(fruitInterval);
+            gameOverDisplay.style.display = 'block';
+            startButton.style.display = 'block';
+            console.log('Game over');
+        }
+
+        function restartGame(e) {
+            if (e.key === 'r' && !gameActive) {
+                startGame();
+            }
+        }
+    </script>
+</body>
+</html>
